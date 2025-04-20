@@ -1,28 +1,39 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { StorageServiceProvider } from './contexts/StorageContext';
 import { UIProvider } from './contexts/UIContext';
 import { TaskProvider } from './contexts/TaskContext';
 import { RecordProvider } from './contexts/RecordContext';
+import { Layout } from './components/Layout';
+import { TrackingPage } from './pages/TrackingPage';
+import { HistoryPage } from './pages/HistoryPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { TaskModal } from './components/TaskModal';
+import { RecordModal } from './components/RecordModal';
 
 function App() {
   return (
-    <StorageServiceProvider>
-      <UIProvider>
-        <TaskProvider>
-          <RecordProvider>
-            <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-              <header className="p-4 bg-white dark:bg-gray-800 shadow">
-                <h1 className="text-2xl font-bold text-center">Simple Time Tracker</h1>
-              </header>
-              <main className="container mx-auto p-4">
-                <div className="text-center">
-                  <p>タイムトラッカーアプリ（実装中）</p>
-                </div>
-              </main>
-            </div>
-          </RecordProvider>
-        </TaskProvider>
-      </UIProvider>
-    </StorageServiceProvider>
+    <BrowserRouter>
+      <StorageServiceProvider>
+        <UIProvider>
+          <TaskProvider>
+            <RecordProvider>
+              {/* メインコンテンツ */}
+              <Routes>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<TrackingPage />} />
+                  <Route path="history" element={<HistoryPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                </Route>
+              </Routes>
+              
+              {/* モーダルコンポーネント */}
+              <TaskModal />
+              <RecordModal />
+            </RecordProvider>
+          </TaskProvider>
+        </UIProvider>
+      </StorageServiceProvider>
+    </BrowserRouter>
   );
 }
 
