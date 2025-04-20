@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTaskContext } from '../contexts/TaskContext';
 import { useRecordContext } from '../contexts/RecordContext';
 import { useUIContext } from '../contexts/UIContext';
@@ -11,6 +11,9 @@ export function RecordModal() {
   
   // フォーム状態
   const [note, setNote] = useState('');
+  
+  // テキストエリアへの参照
+  const noteTextareaRef = useRef<HTMLTextAreaElement>(null);
   
   // 現在表示中のレコード
   const currentRecord = recordModal.recordId
@@ -26,8 +29,27 @@ export function RecordModal() {
   useEffect(() => {
     if (recordModal.open && currentRecord) {
       setNote(currentRecord.note || '');
+      
+      // テキストエリアにフォーカス
+      setTimeout(() => {
+        noteTextareaRef.current?.focus();
+      }, 100);
     }
   }, [recordModal, currentRecord]);
+  
+  // エスケープキーでモーダルを閉じる
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && recordModal.open) {
+        closeRecordModal();
+      }
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [recordModal.open, closeRecordModal]);
   
   // 保存ハンドラー
   const handleSave = () => {
@@ -51,16 +73,30 @@ export function RecordModal() {
   if (!recordModal.open || !currentRecord || !task) return null;
   
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in"
+      role="dialog"
+      aria-labelledby="record-modal-title"
+      aria-modal="true"
+      onClick={(e) => {
+        // 背景クリックでモーダルを閉じる
+        if (e.target === e.currentTarget) {
+          closeRecordModal();
+        }
+      }}
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md transform transition-transform"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 border-b dark:border-gray-700">
-          <h2 className="text-lg font-semibold">記録の詳細</h2>
+          <h2 id="record-modal-title" className="text-lg font-semibold">記録の詳細</h2>
         </div>
         
         <div className="p-4 space-y-4">
           {/* タスク情報 */}
           <div className="flex items-center space-x-2 mb-4">
-            <span className="text-2xl">{task.icon}</span>
+            <span className="emoji">{task.icon}</span>
             <span className="text-lg font-medium">{task.name}</span>
             <span className="ml-auto font-mono font-semibold">
               {formatTime(currentRecord.accumulated)}
@@ -86,10 +122,12 @@ export function RecordModal() {
             </label>
             <textarea
               id="recordNote"
+              ref={noteTextareaRef}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="メモを入力"
-              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 min-h-24"
+              className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 min-h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              aria-label="記録のメモ"
             />
           </div>
         </div>
@@ -98,7 +136,8 @@ export function RecordModal() {
           <button
             type="button"
             onClick={handleDelete}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition"
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-all touch-target"
+            aria-label="記録を削除"
           >
             削除
           </button>
@@ -106,14 +145,16 @@ export function RecordModal() {
             <button
               type="button"
               onClick={closeRecordModal}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded transition"
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded transition-all touch-target"
+              aria-label="キャンセル"
             >
               キャンセル
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-all touch-target"
+              aria-label="記録を保存"
             >
               保存
             </button>

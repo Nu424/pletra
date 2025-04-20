@@ -31,6 +31,23 @@ interface UIContextType extends UIState {
   setTheme: (theme: 'light' | 'dark') => void;
 }
 
+// テーマの取得（初期値）
+function getInitialTheme(): 'light' | 'dark' {
+  // ローカルストレージからの読み込み
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark' || savedTheme === 'light') {
+    return savedTheme;
+  }
+  
+  // OSのプリファレンスをチェック
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+  
+  // デフォルトはライトモード
+  return 'light';
+}
+
 // 初期状態
 const initialState: UIState = {
   taskModal: {
@@ -40,7 +57,7 @@ const initialState: UIState = {
   recordModal: {
     open: false,
   },
-  theme: 'light', // デフォルトはライトテーマ
+  theme: getInitialTheme(), // 初期テーマを動的に決定
 };
 
 // コンテキスト作成
@@ -98,7 +115,26 @@ export function UIProvider({ children }: { children: ReactNode }) {
 
   // テーマの変更をDOMに反映
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', state.theme === 'dark');
+    // DOMにテーマクラスを適用
+    if (state.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    // テーマ設定をlocalStorageに保存
+    localStorage.setItem('theme', state.theme);
+    
+    // color-schemeメタタグを更新
+    const metaColorScheme = document.querySelector('meta[name="color-scheme"]');
+    if (metaColorScheme) {
+      metaColorScheme.setAttribute('content', state.theme);
+    } else {
+      const meta = document.createElement('meta');
+      meta.name = 'color-scheme';
+      meta.content = state.theme;
+      document.head.appendChild(meta);
+    }
   }, [state.theme]);
 
   // コンテキスト値

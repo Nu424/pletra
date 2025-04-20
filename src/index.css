@@ -1,1 +1,60 @@
 @import "tailwindcss";
+
+/* カスタムスタイル */
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/* 絵文字のスタイリング */
+.emoji {
+  font-family: 'Noto Color Emoji', sans-serif;
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+/* アニメーション */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* トランジション */
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+/* モバイルファースト設定 */
+/* すでにTailwindCSSが提供する機能を使用するため、ここでは特に追加は不要 */
+
+/* Tailwindのダークモード連携 */
+.dark body {
+  background-color: #121212;
+  color: #e5e5e5;
+}
+
+/* アクセシビリティの補助 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ボタンのタッチ領域を確保 */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
