@@ -3,7 +3,7 @@ import { useTaskContext } from '../contexts/TaskContext';
 import { useRecordContext } from '../contexts/RecordContext';
 import { useUIContext } from '../contexts/UIContext';
 import { useTimer } from '../hooks/useTimer';
-import { useLongPress } from '../hooks/useLongPress';
+import { TaskButton } from '../components/TaskButton';
 import { formatTime } from '../utils/timeUtils';
 
 export function TrackingPage() {
@@ -76,15 +76,6 @@ export function TrackingPage() {
     }
   };
 
-  // 各タスクの長押し処理用のフック生成関数
-  const createTaskLongPressHandlers = (task: { id: string }) => {
-    return useLongPress({
-      onClick: () => handleStartTask(task.id),
-      onLongPress: () => openTaskModal('edit', task.id),
-      threshold: 600, // 長押しと判定する時間（ms）
-    });
-  };
-
   return (
     <div className="space-y-6">
       {/* アクティブレコードカード - 常に表示 */}
@@ -148,16 +139,13 @@ export function TrackingPage() {
         <h2 className="text-lg font-medium mb-3">タスク</h2>
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
           {tasks.map((task, index) => (
-            <button
+            <TaskButton
               key={task.id}
-              {...createTaskLongPressHandlers(task)}
-              className="aspect-square flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all touch-target active:bg-gray-100 dark:active:bg-gray-700"
-              style={{ animationDelay: `${0.05 * (index + 1)}s` }}
-              aria-label={`タスク: ${task.name}`}
-            >
-              <span className="emoji mb-2">{task.icon}</span>
-              <span className="text-sm text-center">{task.name}</span>
-            </button>
+              task={task}
+              index={index}
+              onClick={handleStartTask}
+              onLongPress={(taskId) => openTaskModal('edit', taskId)}
+            />
           ))}
           
           {/* 追加ボタン */}
