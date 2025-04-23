@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface TimerState {
-  elapsedTime: number; // ミリ秒単位の経過時間
+  currentTime: number; // タイマーの累計時間
+  fixedTime: number; // すでに確定した時間量。時間は、一時停止により確定される。
   isRunning: boolean;  // タイマーが動作中かどうか
 }
 
@@ -10,7 +11,7 @@ interface UseTimerResult extends TimerState {
   pause: () => void;
   resume: () => void;
   reset: () => void;
-  getElapsedTime: () => number;
+  getCurrentTime: () => number;
 }
 
 /**
@@ -21,14 +22,15 @@ interface UseTimerResult extends TimerState {
 export function useTimer(initialAccumulated: number = 0): UseTimerResult {
   // 状態管理
   const [state, setState] = useState<TimerState>({
-    elapsedTime: initialAccumulated,
+    currentTime: initialAccumulated,
+    fixedTime: 0,
     isRunning: false,
   });
 
   // refを使って最新の状態を常に参照できるようにする
   const stateRef = useRef(state);
   const intervalIdRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number>(0);
+  const startTimeRef = useRef<number>(0); // 開始or再開を押した時刻
 
   // stateRefを最新に保つ
   useEffect(() => {
@@ -46,13 +48,17 @@ export function useTimer(initialAccumulated: number = 0): UseTimerResult {
 
   // 経過時間の計算と更新（setIntervalで定期的に呼ばれる）
   const updateElapsedTime = useCallback(() => {
+    // setIntervalで定期的に呼ばれるコールバック。
+    // この中で参照するstateは、useRefを使用しているため、
+    // 常に最新の状態を参照できる(stale-state問題を回避できる)
     if (!stateRef.current.isRunning) return;
-    
+
     const now = Date.now();
-    const elapsed = now - startTimeRef.current + stateRef.current.elapsedTime;
-    
+    const elapsed = (now - startTimeRef.current) + stateRef.current.fixedTime; // 確定した時間量+(今回の計測時間)
+
     setState({
-      elapsedTime: elapsed,
+      ...stateRef.current,
+      currentTime: elapsed,
       isRunning: true,
     });
   }, []);
@@ -63,13 +69,14 @@ export function useTimer(initialAccumulated: number = 0): UseTimerResult {
     if (intervalIdRef.current !== null) {
       window.clearInterval(intervalIdRef.current);
     }
-    
+
     startTimeRef.current = Date.now();
     setState({
-      elapsedTime: 0, // 開始時はゼロから
+      currentTime: 0, // 開始時はゼロから
+      fixedTime: 0,
       isRunning: true,
     });
-    
+
     intervalIdRef.current = window.setInterval(updateElapsedTime, 100);
   }, [updateElapsedTime]);
 
@@ -79,9 +86,13 @@ export function useTimer(initialAccumulated: number = 0): UseTimerResult {
       window.clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
     }
-    
+    // totalTimeを更新する
+    const now = Date.now();
+    const thisMeasuredTime = (now - startTimeRef.current);
     setState((prev) => ({
       ...prev,
+      currentTime: stateRef.current.fixedTime + thisMeasuredTime,
+      fixedTime: stateRef.current.fixedTime + thisMeasuredTime, // 確定した時間量を加算していく
       isRunning: false,
     }));
   }, []);
@@ -89,13 +100,13 @@ export function useTimer(initialAccumulated: number = 0): UseTimerResult {
   // タイマー再開
   const resume = useCallback(() => {
     if (stateRef.current.isRunning) return; // 既に実行中なら何もしない
-    
+
     startTimeRef.current = Date.now();
     setState((prev) => ({
       ...prev,
       isRunning: true,
     }));
-    
+
     intervalIdRef.current = window.setInterval(updateElapsedTime, 100);
   }, [updateElapsedTime]);
 
@@ -105,22 +116,23 @@ export function useTimer(initialAccumulated: number = 0): UseTimerResult {
       window.clearInterval(intervalIdRef.current);
       intervalIdRef.current = null;
     }
-    
+
     setState({
-      elapsedTime: 0,
+      currentTime: 0,
+      fixedTime: 0,
       isRunning: false,
     });
   }, []);
 
   // 現在の経過時間を取得
-  const getElapsedTime = useCallback(() => {
+  const getCurrentTime = useCallback(() => {
     if (!stateRef.current.isRunning) {
-      return stateRef.current.elapsedTime;
+      return stateRef.current.currentTime;
     }
-    
+
     // 実行中の場合はリアルタイムで計算
     const now = Date.now();
-    return now - startTimeRef.current + stateRef.current.elapsedTime;
+    return (now - startTimeRef.current) + stateRef.current.currentTime;
   }, []);
 
   return {
@@ -129,6 +141,6 @@ export function useTimer(initialAccumulated: number = 0): UseTimerResult {
     pause,
     resume,
     reset,
-    getElapsedTime,
+    getCurrentTime,
   };
 } 

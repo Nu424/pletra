@@ -37,7 +37,7 @@ export function TrackingPage() {
   const handleStartTask = (taskId: string) => {
     if (activeRecord) {
       // 既に実行中のタスクがある場合は完了する
-      completeRecord(timer.getElapsedTime());
+      completeRecord(timer.getCurrentTime());
       timer.reset();
     }
     
@@ -47,7 +47,7 @@ export function TrackingPage() {
   // 一時停止ハンドラー
   const handlePauseRecord = () => {
     if (activeRecord) {
-      pauseRecord(timer.getElapsedTime());
+      pauseRecord(timer.getCurrentTime());
       timer.pause();
     }
   };
@@ -63,7 +63,7 @@ export function TrackingPage() {
   // 完了ハンドラー
   const handleCompleteRecord = () => {
     if (activeRecord) {
-      completeRecord(timer.getElapsedTime());
+      completeRecord(timer.getCurrentTime());
       timer.reset();
     }
   };
@@ -87,7 +87,7 @@ export function TrackingPage() {
                 <span className="emoji">{activeTask.icon}</span>
                 <span className="text-lg font-semibold">{activeTask.name}</span>
               </div>
-              <div className="text-2xl font-mono">{formatTime(timer.elapsedTime)}</div>
+              <div className="text-2xl font-mono">{formatTime(timer.currentTime)}</div>
             </div>
             
             <div className="mt-4 flex justify-between">
