@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useTaskContext } from '../contexts/TaskContext';
 import { useRecordContext } from '../contexts/RecordContext';
 import { useUIContext } from '../contexts/UIContext';

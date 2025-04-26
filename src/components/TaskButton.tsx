@@ -1,4 +1,3 @@
-import React from 'react';
 import { useLongPress } from '../hooks/useLongPress';
 import type { Task } from '../types';
 
