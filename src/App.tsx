@@ -9,29 +9,32 @@ import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { TaskModal } from './components/TaskModal';
 import { RecordModal } from './components/RecordModal';
+import { TimerProvider } from './contexts/TimerContext';
 
 function App() {
   return (
     <BrowserRouter>
       <StorageServiceProvider>
-        <UIProvider>
-          <TaskProvider>
-            <RecordProvider>
-              {/* メインコンテンツ */}
-              <Routes>
-                <Route path="/" element={<Layout />}>
-                  <Route index element={<TrackingPage />} />
-                  <Route path="history" element={<HistoryPage />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                </Route>
-              </Routes>
-              
-              {/* モーダルコンポーネント */}
-              <TaskModal />
-              <RecordModal />
-            </RecordProvider>
-          </TaskProvider>
-        </UIProvider>
+        <TimerProvider>
+          <UIProvider>
+            <TaskProvider>
+              <RecordProvider>
+                {/* メインコンテンツ */}
+                <Routes>
+                  <Route path="/" element={<Layout />}>
+                    <Route index element={<TrackingPage />} />
+                    <Route path="history" element={<HistoryPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
+                  </Route>
+                </Routes>
+
+                {/* モーダルコンポーネント */}
+                <TaskModal />
+                <RecordModal />
+              </RecordProvider>
+            </TaskProvider>
+          </UIProvider>
+        </TimerProvider>
       </StorageServiceProvider>
     </BrowserRouter>
   );

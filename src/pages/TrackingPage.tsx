@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 import { useTaskContext } from '../contexts/TaskContext';
 import { useRecordContext } from '../contexts/RecordContext';
 import { useUIContext } from '../contexts/UIContext';
-import { useTimer } from '../hooks/useTimer';
 import { TaskButton } from '../components/TaskButton';
 import { formatTime } from '../utils/timeUtils';
+import { useTimerContext } from '../contexts/TimerContext';
 
 export function TrackingPage() {
   const { tasks } = useTaskContext();
-  const { activeRecord, startRecord, pauseRecord, resumeRecord, completeRecord, cancelRecord } = useRecordContext();
+  const { activeRecord, selectTask, startRecord, pauseRecord, resumeRecord, completeRecord, cancelRecord, deselectTask } = useRecordContext();
   const { openTaskModal } = useUIContext();
   
   const activeTask = activeRecord 
@@ -16,37 +16,34 @@ export function TrackingPage() {
     : undefined;
   
   // タイマーカスタムフック
-  const timer = useTimer(activeRecord?.accumulated || 0);
-  
-  // タイマーの開始・停止を制御
-  useEffect(() => {
-    if (activeRecord) {
-      // アクティブなレコードがある場合はタイマーを開始/再開
-      if (!timer.isRunning) {
-        timer.resume();
-      }
-    } else {
-      // アクティブなレコードがない場合はタイマーを停止
-      if (timer.isRunning) {
-        timer.pause();
-      }
-    }
-  }, [activeRecord, timer]);
+  const timer = useTimerContext();
 
-  // タスク開始ハンドラー
-  const handleStartTask = (taskId: string) => {
-    if (activeRecord) {
-      // 既に実行中のタスクがある場合は完了する
+  // タスク選択ハンドラー
+  const handleSelectTask = (taskId: string) => {
+    // 既にアクティブなタスクがある場合、まずそれを完了させる
+    if (activeRecord && activeRecord.startAt > 0) {
       completeRecord(timer.getCurrentTime());
       timer.reset();
+    } else if (activeRecord) {
+      // タスクが選択されているだけで記録が開始されていない場合は、タスクを解除
+      deselectTask();
     }
     
-    startRecord(taskId);
+    // 新しいタスクを選択
+    selectTask(taskId);
+  };
+
+  // 記録開始ハンドラー
+  const handleStartRecord = () => {
+    if (activeRecord && activeRecord.startAt === 0) {
+      startRecord();
+      timer.start(activeRecord?.accumulated || 0); // タイマーも開始
+    }
   };
 
   // 一時停止ハンドラー
   const handlePauseRecord = () => {
-    if (activeRecord) {
+    if (activeRecord && activeRecord.startAt > 0) {
       pauseRecord(timer.getCurrentTime());
       timer.pause();
     }
@@ -62,9 +59,12 @@ export function TrackingPage() {
 
   // 完了ハンドラー
   const handleCompleteRecord = () => {
-    if (activeRecord) {
+    if (activeRecord && activeRecord.startAt > 0) {
       completeRecord(timer.getCurrentTime());
       timer.reset();
+    } else if (activeRecord) {
+      // タスクが選択されているだけで記録が開始されていない場合は、タスクを解除するだけ
+      deselectTask();
     }
   };
 
@@ -73,6 +73,13 @@ export function TrackingPage() {
     if (activeRecord) {
       cancelRecord();
       timer.reset();
+    }
+  };
+
+  // タスク解除ハンドラー
+  const handleDeselectTask = () => {
+    if (activeRecord) {
+      deselectTask();
     }
   };
 
@@ -91,30 +98,56 @@ export function TrackingPage() {
             </div>
             
             <div className="mt-4 flex justify-between">
-              {timer.isRunning ? (
-                <button 
-                  onClick={handlePauseRecord}
-                  className="flex-1 py-2 px-4 mr-2 bg-white/20 hover:bg-white/30 rounded touch-target transition-all active:bg-white/40"
-                  aria-label="一時停止"
-                >
-                  <span className="emoji">⏸️</span> 一時停止
-                </button>
+              {activeRecord.startAt > 0 ? (
+                // 記録中の場合は一時停止/再開ボタンを表示
+                timer.isRunning ? (
+                  <button 
+                    onClick={handlePauseRecord}
+                    className="flex-1 py-2 px-4 mr-2 bg-white/20 hover:bg-white/30 rounded touch-target transition-all active:bg-white/40"
+                    aria-label="一時停止"
+                  >
+                    <span className="emoji">⏸️</span> 一時停止
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleResumeRecord}
+                    className="flex-1 py-2 px-4 mr-2 bg-white/20 hover:bg-white/30 rounded touch-target transition-all active:bg-white/40"
+                    aria-label="再開"
+                  >
+                    <span className="emoji">▶️</span> 再開
+                  </button>
+                )
               ) : (
+                // 記録開始前は開始ボタンを表示
                 <button 
-                  onClick={handleResumeRecord}
-                  className="flex-1 py-2 px-4 mr-2 bg-white/20 hover:bg-white/30 rounded touch-target transition-all active:bg-white/40"
-                  aria-label="再開"
+                  onClick={handleStartRecord}
+                  className="flex-1 py-2 px-4 mr-2 bg-green-500/50 hover:bg-green-500/70 rounded touch-target transition-all active:bg-green-500/80"
+                  aria-label="開始"
                 >
-                  <span className="emoji">▶️</span> 再開
+                  <span className="emoji">▶️</span> 開始
                 </button>
               )}
-              <button 
-                onClick={handleCompleteRecord}
-                className="flex-1 py-2 px-4 mx-2 bg-green-500/50 hover:bg-green-500/70 rounded touch-target transition-all active:bg-green-500/80"
-                aria-label="完了"
-              >
-                <span className="emoji">✅</span> 完了
-              </button>
+              
+              {activeRecord.startAt > 0 ? (
+                // 記録中の場合は完了ボタンを表示
+                <button 
+                  onClick={handleCompleteRecord}
+                  className="flex-1 py-2 px-4 mx-2 bg-green-500/50 hover:bg-green-500/70 rounded touch-target transition-all active:bg-green-500/80"
+                  aria-label="完了"
+                >
+                  <span className="emoji">✅</span> 完了
+                </button>
+              ) : (
+                // 記録開始前は解除ボタンを表示
+                <button 
+                  onClick={handleDeselectTask}
+                  className="flex-1 py-2 px-4 mx-2 bg-yellow-500/50 hover:bg-yellow-500/70 rounded touch-target transition-all active:bg-yellow-500/80"
+                  aria-label="解除"
+                >
+                  <span className="emoji">🔄</span> 解除
+                </button>
+              )}
+              
               <button 
                 onClick={handleCancelRecord}
                 className="flex-1 py-2 px-4 ml-2 bg-red-500/50 hover:bg-red-500/70 rounded touch-target transition-all active:bg-red-500/80"
@@ -128,7 +161,7 @@ export function TrackingPage() {
           <div className="p-4 rounded-xl shadow-md bg-white dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
             <div className="emoji text-4xl mb-2">👇</div>
             <p className="text-gray-600 dark:text-gray-300">
-              下のタスクをタップして記録を始めましょう！
+              下のタスクをタップして選択しましょう！
             </p>
           </div>
         )}
@@ -143,7 +176,7 @@ export function TrackingPage() {
               key={task.id}
               task={task}
               index={index}
-              onClick={handleStartTask}
+              onClick={handleSelectTask}
               onLongPress={(taskId) => openTaskModal('edit', taskId)}
             />
           ))}

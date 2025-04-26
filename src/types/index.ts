@@ -12,4 +12,11 @@ export type Record = {
   accumulated: number;       // 一時停止時の累計(ms)
   endAt?: number;            // 完了時刻／中断時は undefined
   note?: string;             // メモ
-}; 
+};
+
+export type TimerState = {
+  currentTime: number; // タイマーの累計時間。表示用
+  fixedTime: number; // すでに確定した時間量。時間は、一時停止により確定される。
+  isRunning: boolean;  // タイマーが動作中かどうか
+  startTime: number; // タイマーの開始時刻(開始or再開時刻)
+}
