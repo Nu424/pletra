@@ -1,54 +1,31 @@
-# React + TypeScript + Vite
+# pletra (ぷるとら) 🚀
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**シン\"プル\"** なタイム **\"トラ\"** ッカーで **pletra**です。
 
-Currently, two official plugins are available:
+日々の作業や勉強時間をサクッと記録できる、お手軽タイムトラッキングアプリです。  
+「あの作業、どれくらい時間かかったっけ？」をなくします 💪
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ 主な機能
 
-## Expanding the ESLint configuration
+-   **タスク管理**: よく使うタスクを登録・編集・削除！アイコンも選べます😉
+-   **タイムトラッキング**: 開始・一時停止・完了・中断をポチッと操作
+-   **記録一覧**: いつ、どのタスクを、どれくらいやったか一目瞭然！ソート・検索も OK🔍
+-   **合計時間**: 記録した時間の合計をサッと確認
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🛠️ 使ってる技術
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+-   **フロントエンド**: React + TypeScript
+-   **スタイリング**: TailwindCSS
+-   **ビルドツール**: Vite
+-   **状態管理**: React Context + useReducer
+-   **データ保存**: まずは `localStorage` でお手軽に
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🚀 動かしてみる
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# 依存関係をインストール
+npm install
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+# 開発モードで起動
+npm run dev
 ```
