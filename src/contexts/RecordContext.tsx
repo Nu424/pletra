@@ -1,25 +1,28 @@
 import { createContext, ReactNode, useContext, useReducer, useEffect } from 'react';
-import { Record } from '../types';
+import { Record, Task, TrackingState } from '../types';
 import { useStorageService } from './StorageContext';
+import { useTaskContext } from './TaskContext';
 
 // アクションタイプ
 type RecordAction =
-  | { type: 'SELECT_TASK'; payload: { taskId: string } }
   | { type: 'START_RECORD' }
   | { type: 'PAUSE_RECORD'; payload: { accumulated: number } }
   | { type: 'RESUME_RECORD' }
   | { type: 'COMPLETE_RECORD'; payload: { accumulated: number } }
   | { type: 'CANCEL_RECORD' }
-  | { type: 'DESELECT_TASK' }
+  | { type: 'LOAD_RECORDS'; payload: Record[] }
+  // HistoryPageでのレコード更新
   | { type: 'UPDATE_RECORD'; payload: Record }
   | { type: 'DELETE_RECORD'; payload: { id: string } }
-  | { type: 'LOAD_RECORDS'; payload: Record[] }
+  // タスクの選択
+  | { type: 'SELECT_TASK'; payload: { taskId: string } }
+  | { type: 'DESELECT_TASK' }
   | { type: 'UPDATE_ACCUMULATED'; payload: { accumulated: number } };
 
 // 状態型
 interface RecordState {
   records: Record[];
-  activeRecordId?: string;
+  trackingState: TrackingState;
 }
 
 // コンテキスト型
@@ -29,10 +32,14 @@ interface RecordContextType extends RecordState {
   resumeRecord: () => void;
   completeRecord: (accumulated: number) => void;
   cancelRecord: () => void;
+  // ---HistoryPageでのレコード更新
   updateRecord: (record: Record) => void;
   deleteRecord: (id: string) => void;
+  // ---タスクの選択
   selectTask: (taskId: string) => void;
   deselectTask: () => void;
+  // ---セットされているTask, 記録中のRecord
+  selectedTask: Task | undefined;
   activeRecord: Record | undefined;
 }
 
@@ -42,50 +49,36 @@ const RecordContext = createContext<RecordContextType | undefined>(undefined);
 // リデューサー
 function recordReducer(state: RecordState, action: RecordAction): RecordState {
   switch (action.type) {
-    case 'SELECT_TASK': {
-      // 既存のアクティブレコードがある場合は先に完了する
-      if (state.activeRecordId) {
-        return {
-          ...state,
-          activeRecordId: undefined,
-        };
-      }
+    case 'START_RECORD': {
+      if (!state.trackingState.selectedTaskId) return state; // タスクが選択されていない場合は何もしない
+      if (state.trackingState.activeRecordId) return state; // 既にアクティブなレコードがある場合は何もしない
 
-      // 新しいレコードを作成（まだタイマーは開始しない）
+      // 新しいレコードを作成
       const newRecord: Record = {
         id: crypto.randomUUID(),
-        taskId: action.payload.taskId,
-        startAt: 0,
+        taskId: state.trackingState.selectedTaskId,
+        startAt: Date.now(),
         accumulated: 0,
       };
 
-      return {
-        records: [...state.records, newRecord],
-        activeRecordId: newRecord.id,
-      };
-    }
-
-    case 'START_RECORD': {
-      if (!state.activeRecordId) return state;
-      
       // 既存のレコードを取得し、タイマーを開始
       return {
         ...state,
-        records: state.records.map((record) => 
-          record.id === state.activeRecordId
-            ? { ...record, startAt: Date.now() }
-            : record
-        ),
+        records: [...state.records, newRecord],
+        trackingState: {
+          ...state.trackingState,
+          activeRecordId: newRecord.id,
+        },
       };
     }
 
     case 'PAUSE_RECORD': {
-      if (!state.activeRecordId) return state;
-      
+      if (!state.trackingState.activeRecordId) return state; // アクティブなレコードがない場合は何もしない
+
       return {
         ...state,
-        records: state.records.map((record) => 
-          record.id === state.activeRecordId
+        records: state.records.map((record) =>
+          record.id === state.trackingState.activeRecordId
             ? { ...record, accumulated: action.payload.accumulated }
             : record
         ),
@@ -93,24 +86,13 @@ function recordReducer(state: RecordState, action: RecordAction): RecordState {
       };
     }
 
-    case 'DESELECT_TASK': {
-      if (!state.activeRecordId) return state;
-      
-      // タスクを解除（レコードも削除…startAtが0の空レコードが残っているため）
-      return {
-        ...state,
-        records: state.records.filter((record) => record.id !== state.activeRecordId),
-        activeRecordId: undefined,
-      };
-    }
-
     case 'RESUME_RECORD': {
-      if (!state.activeRecordId) return state;
-      
+      if (!state.trackingState.activeRecordId) return state; // アクティブなレコードがない場合は何もしない
+
       return {
         ...state,
-        records: state.records.map((record) => 
-          record.id === state.activeRecordId
+        records: state.records.map((record) =>
+          record.id === state.trackingState.activeRecordId
             ? { ...record, startAt: Date.now() }
             : record
         ),
@@ -118,49 +100,38 @@ function recordReducer(state: RecordState, action: RecordAction): RecordState {
     }
 
     case 'COMPLETE_RECORD': {
-      if (!state.activeRecordId) return state;
+      if (!state.trackingState.activeRecordId) return state; // アクティブなレコードがない場合は何もしない
 
       return {
         ...state,
-        records: state.records.map((record) => 
-          record.id === state.activeRecordId
-            ? { 
-                ...record, 
-                accumulated: action.payload.accumulated,
-                endAt: Date.now() 
-              }
+        records: state.records.map((record) =>
+          record.id === state.trackingState.activeRecordId
+            ? {
+              ...record,
+              accumulated: action.payload.accumulated,
+              endAt: Date.now()
+            }
             : record
         ),
-        activeRecordId: undefined,
+        trackingState: {
+          ...state.trackingState,
+          activeRecordId: undefined,
+        },
       };
     }
 
     case 'CANCEL_RECORD': {
-      if (!state.activeRecordId) return state;
-      
+      if (!state.trackingState.activeRecordId) return state; // アクティブなレコードがない場合は何もしない
+
       return {
         ...state,
-        records: state.records.filter((record) => record.id !== state.activeRecordId),
-        activeRecordId: undefined,
+        records: state.records.filter((record) => record.id !== state.trackingState.activeRecordId),
+        trackingState: {
+          ...state.trackingState,
+          activeRecordId: undefined,
+        },
       };
     }
-
-    case 'UPDATE_RECORD':
-      return {
-        ...state,
-        records: state.records.map((record) => 
-          record.id === action.payload.id ? action.payload : record
-        ),
-      };
-
-    case 'DELETE_RECORD':
-      return {
-        ...state,
-        records: state.records.filter((record) => record.id !== action.payload.id),
-        activeRecordId: state.activeRecordId === action.payload.id 
-          ? undefined 
-          : state.activeRecordId,
-      };
 
     case 'LOAD_RECORDS':
       return {
@@ -169,15 +140,69 @@ function recordReducer(state: RecordState, action: RecordAction): RecordState {
       };
 
     case 'UPDATE_ACCUMULATED': {
-      if (!state.activeRecordId) return state;
-      
+      if (!state.trackingState.activeRecordId) return state;
+
       return {
         ...state,
-        records: state.records.map((record) => 
-          record.id === state.activeRecordId
+        records: state.records.map((record) =>
+          record.id === state.trackingState.activeRecordId
             ? { ...record, accumulated: action.payload.accumulated }
             : record
         ),
+      };
+    }
+
+    // ----------
+    // ---HistoryPageでのレコード更新 
+    // ----------
+    case 'UPDATE_RECORD':
+      return {
+        ...state,
+        records: state.records.map((record) =>
+          record.id === action.payload.id ? action.payload : record
+        ),
+      };
+
+    case 'DELETE_RECORD':
+      return {
+        ...state,
+        records: state.records.filter((record) => record.id !== action.payload.id),
+      };
+
+    // ----------
+    // ---タスクの選択
+    // ----------
+    case 'SELECT_TASK': {
+      // 既存のアクティブレコードがある場合は先に完了する
+      if (state.trackingState.activeRecordId) {
+        return {
+          ...state,
+          trackingState: {
+            ...state.trackingState,
+            activeRecordId: undefined,
+          },
+        };
+      }
+
+      return {
+        ...state,
+        trackingState: {
+          ...state.trackingState,
+          selectedTaskId: action.payload.taskId,
+        },
+      };
+    }
+
+    case 'DESELECT_TASK': {
+      if (!state.trackingState.selectedTaskId) return state;
+
+      // タスクを解除（レコードも削除…startAtが0の空レコードが残っているため）
+      return {
+        ...state,
+        trackingState: {
+          ...state.trackingState,
+          selectedTaskId: undefined,
+        },
       };
     }
 
@@ -189,51 +214,54 @@ function recordReducer(state: RecordState, action: RecordAction): RecordState {
 // プロバイダーコンポーネント
 export function RecordProvider({ children }: { children: ReactNode }) {
   const storageService = useStorageService();
-  const [state, dispatch] = useReducer(recordReducer, { records: [] }, () => {
-    // 初期化時にストレージからレコードを読み込む
-    const records = storageService.loadRecords();
-    
-    // アクティブなレコードがあるか確認（endAt が未設定のもの）
-    const activeRecord = records.find((record) => !record.endAt);
-    
+  const [state, dispatch] = useReducer(recordReducer, { records: [], trackingState: { selectedTaskId: undefined, activeRecordId: undefined } }, () => {
+    // ---初期化時にストレージからレコードを読み込む
+    const storedRecords = storageService.loadRecords();
+    const storedTrackingState = storageService.loadTrackingState();
+
     return {
-      records,
-      activeRecordId: activeRecord?.id,
+      records: storedRecords,
+      trackingState: storedTrackingState,
     };
   });
 
   // レコード変更時にストレージに保存
   useEffect(() => {
     storageService.saveRecords(state.records);
-  }, [state.records, storageService]);
+    storageService.saveTrackingState(state.trackingState);
+  }, [state.records, state.trackingState, storageService]);
 
-  // 現在アクティブなレコードを取得
-  const activeRecord = state.activeRecordId
-    ? state.records.find((record) => record.id === state.activeRecordId)
-    : undefined;
+  // ---セットされているTask, 記録中のRecordを取得
+  const { tasks } = useTaskContext();
+  const selectedTask = tasks.find((task) => task.id === state.trackingState.selectedTaskId);
+  const activeRecord = state.records.find((record) => record.id === state.trackingState.activeRecordId);
 
   // コンテキスト値
   const value: RecordContextType = {
     ...state,
-    activeRecord,
-    selectTask: (taskId: string) =>
-      dispatch({ type: 'SELECT_TASK', payload: { taskId } }),
     startRecord: () =>
       dispatch({ type: 'START_RECORD' }),
-    pauseRecord: (accumulated: number) => 
+    pauseRecord: (accumulated: number) =>
       dispatch({ type: 'PAUSE_RECORD', payload: { accumulated } }),
-    resumeRecord: () => 
+    resumeRecord: () =>
       dispatch({ type: 'RESUME_RECORD' }),
-    completeRecord: (accumulated: number) => 
+    completeRecord: (accumulated: number) =>
       dispatch({ type: 'COMPLETE_RECORD', payload: { accumulated } }),
-    cancelRecord: () => 
+    cancelRecord: () =>
       dispatch({ type: 'CANCEL_RECORD' }),
+    // ---HistoryPageでのレコード更新
+    updateRecord: (record: Record) =>
+      dispatch({ type: 'UPDATE_RECORD', payload: record }),
+    deleteRecord: (id: string) =>
+      dispatch({ type: 'DELETE_RECORD', payload: { id } }),
+    // ---タスクの選択
+    selectTask: (taskId: string) =>
+      dispatch({ type: 'SELECT_TASK', payload: { taskId } }),
     deselectTask: () =>
       dispatch({ type: 'DESELECT_TASK' }),
-    updateRecord: (record: Record) => 
-      dispatch({ type: 'UPDATE_RECORD', payload: record }),
-    deleteRecord: (id: string) => 
-      dispatch({ type: 'DELETE_RECORD', payload: { id } }),
+    // ---セットされているTask, 記録中のRecord
+    selectedTask,
+    activeRecord,
   };
 
   return <RecordContext.Provider value={value}>{children}</RecordContext.Provider>;

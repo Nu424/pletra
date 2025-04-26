@@ -1,10 +1,11 @@
-import { Task, Record, TimerState } from '../types';
+import { Task, Record, TimerState, TrackingState } from '../types';
 
 // ストレージキー定数
 const STORAGE_KEYS = {
   TASKS: 'simple-time-tracker:tasks',
   RECORDS: 'simple-time-tracker:records',
   TIMER: 'simple-time-tracker:timer',
+  TRACKING_STATE: 'simple-time-tracker:tracking-state',
 };
 
 // ストレージサービスインターフェース
@@ -15,6 +16,8 @@ export interface IStorageService {
   saveRecords(records: Record[]): void;
   loadTimer(): TimerState;
   saveTimer(timer: TimerState): void;
+  loadTrackingState(): TrackingState;
+  saveTrackingState(state: TrackingState): void;
 }
 
 // LocalStorage実装
@@ -70,6 +73,24 @@ export class LocalStorageService implements IStorageService {
       localStorage.setItem(STORAGE_KEYS.TIMER, JSON.stringify(timer));
     } catch (error) {
       console.error('Error saving timer to localStorage:', error);
+    }
+  }
+
+  loadTrackingState(): TrackingState {
+    try {
+      const stateJson = localStorage.getItem(STORAGE_KEYS.TRACKING_STATE);
+      return stateJson ? JSON.parse(stateJson) : { selectedTaskId: undefined, activeRecordId: undefined };
+    } catch (error) {
+      console.error('Error loading tracking state from localStorage:', error);
+      return { selectedTaskId: undefined, activeRecordId: undefined };
+    }
+  }
+
+  saveTrackingState(state: TrackingState): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.TRACKING_STATE, JSON.stringify(state));
+    } catch (error) {
+      console.error('Error saving tracking state to localStorage:', error);
     }
   }
 }

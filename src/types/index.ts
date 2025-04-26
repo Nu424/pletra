@@ -20,3 +20,8 @@ export type TimerState = {
   isRunning: boolean;  // タイマーが動作中かどうか
   startTime: number; // タイマーの開始時刻(開始or再開時刻)
 }
+
+export type TrackingState = {
+  selectedTaskId: string | undefined; // 現在セットされているTaskId
+  activeRecordId: string | undefined; // 記録中のRecordId
+}
