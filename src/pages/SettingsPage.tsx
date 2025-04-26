@@ -39,8 +39,7 @@ export function SettingsPage() {
   
   // データをクリアする処理
   const handleClearData = () => {
-    if (window.confirm('全てのデータを削除します。この操作は元に戻せません。よろしいですか？')) {
-      storageService.saveTasks([]);
+    if (window.confirm('全ての記録データを削除します。この操作は元に戻せません。よろしいですか？')) {
       storageService.saveRecords([]);
       window.location.reload();
     }
