@@ -1,5 +1,4 @@
 import { createContext, ReactNode, useContext, useReducer, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { Record } from '../types';
 import { useStorageService } from './StorageContext';
 
@@ -54,7 +53,7 @@ function recordReducer(state: RecordState, action: RecordAction): RecordState {
 
       // 新しいレコードを作成（まだタイマーは開始しない）
       const newRecord: Record = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         taskId: action.payload.taskId,
         startAt: 0,
         accumulated: 0,

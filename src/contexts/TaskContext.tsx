@@ -1,5 +1,4 @@
 import { createContext, ReactNode, useContext, useReducer, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { Task } from '../types';
 import { useStorageService } from './StorageContext';
 
@@ -29,7 +28,7 @@ function taskReducer(state: Task[], action: TaskAction): Task[] {
         ...state,
         {
           ...action.payload,
-          id: uuidv4(),
+          id: crypto.randomUUID(),
           createdAt: Date.now(),
         },
       ];
