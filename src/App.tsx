@@ -12,8 +12,9 @@ import { RecordModal } from './components/RecordModal';
 import { TimerProvider } from './contexts/TimerContext';
 
 function App() {
+  const basename = import.meta.env.BASE_URL;
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <StorageServiceProvider>
         <TimerProvider>
           <UIProvider>
@@ -21,7 +22,7 @@ function App() {
               <RecordProvider>
                 {/* メインコンテンツ */}
                 <Routes>
-                  <Route path="/" element={<Layout />}>
+                  <Route path="/" element={<Layout />} >
                     <Route index element={<TrackingPage />} />
                     <Route path="history" element={<HistoryPage />} />
                     <Route path="settings" element={<SettingsPage />} />
