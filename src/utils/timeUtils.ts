@@ -60,4 +60,50 @@ export function formatDateTime(timestamp: number): string {
  */
 function padZero(num: number): string {
   return num.toString().padStart(2, '0');
+}
+
+/**
+ * YYYY-MM-DD形式の文字列を受け取り、その日の開始時刻（00:00:00）のタイムスタンプを返す
+ * @param dateString YYYY-MM-DD形式の日付文字列
+ * @returns その日の開始時刻のタイムスタンプ（ミリ秒）
+ */
+export function getStartOfDay(dateString: string): number {
+  const date = new Date(dateString);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+/**
+ * YYYY-MM-DD形式の文字列を受け取り、その日の終了時刻（23:59:59.999）のタイムスタンプを返す
+ * @param dateString YYYY-MM-DD形式の日付文字列
+ * @returns その日の終了時刻のタイムスタンプ（ミリ秒）
+ */
+export function getEndOfDay(dateString: string): number {
+  const date = new Date(dateString);
+  date.setHours(23, 59, 59, 999);
+  return date.getTime();
+}
+
+/**
+ * 現在の日付をYYYY-MM-DD形式で返す
+ * @returns 今日の日付文字列
+ */
+export function getTodayString(): string {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = padZero(date.getMonth() + 1);
+  const day = padZero(date.getDate());
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Date オブジェクトをYYYY-MM-DD形式の文字列に変換
+ * @param date Dateオブジェクト
+ * @returns YYYY-MM-DD形式の日付文字列
+ */
+export function formatDateToString(date: Date): string {
+  const year = date.getFullYear();
+  const month = padZero(date.getMonth() + 1);
+  const day = padZero(date.getDate());
+  return `${year}-${month}-${day}`;
 } 

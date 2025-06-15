@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTaskContext } from '../contexts/TaskContext';
 import { useRecordContext } from '../contexts/RecordContext';
 import { useUIContext } from '../contexts/UIContext';
-import { formatTime, formatDateTime, formatDuration } from '../utils/timeUtils';
+import { formatTime, formatDateTime, formatDuration, getStartOfDay, getEndOfDay } from '../utils/timeUtils';
 
 // ソートオプション
 type SortOption = 'newest' | 'oldest' | 'longest' | 'shortest';
@@ -16,12 +16,16 @@ export function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   
+  // 日付範囲フィルタリングの状態
+  const [startDateFilter, setStartDateFilter] = useState('');
+  const [endDateFilter, setEndDateFilter] = useState('');
+  
   // 完了したレコードのみをフィルタリング
   const completedRecords = useMemo(() => 
     records.filter(record => record.endAt !== undefined),
   [records]);
   
-  // 検索とソートを適用したレコードリスト
+  // 検索、日付範囲、ソートを適用したレコードリスト
   const filteredAndSortedRecords = useMemo(() => {
     // 検索フィルタリング
     let filtered = completedRecords;
@@ -30,6 +34,29 @@ export function HistoryPage() {
       filtered = completedRecords.filter(record => {
         const task = tasks.find(t => t.id === record.taskId);
         return task && task.name.toLowerCase().includes(query);
+      });
+    }
+    
+    // 日付範囲フィルタリング
+    if (startDateFilter || endDateFilter) {
+      filtered = filtered.filter(record => {
+        const recordDate = record.startAt;
+        
+        let isWithinRange = true;
+        
+        // 開始日フィルタ
+        if (startDateFilter) {
+          const startOfFilterDay = getStartOfDay(startDateFilter);
+          isWithinRange = isWithinRange && recordDate >= startOfFilterDay;
+        }
+        
+        // 終了日フィルタ
+        if (endDateFilter) {
+          const endOfFilterDay = getEndOfDay(endDateFilter);
+          isWithinRange = isWithinRange && recordDate <= endOfFilterDay;
+        }
+        
+        return isWithinRange;
       });
     }
     
@@ -48,12 +75,18 @@ export function HistoryPage() {
           return 0;
       }
     });
-  }, [completedRecords, tasks, searchQuery, sortOption]);
+  }, [completedRecords, tasks, searchQuery, sortOption, startDateFilter, endDateFilter]);
   
   // 合計時間の計算
   const totalTime = useMemo(() => 
     filteredAndSortedRecords.reduce((sum, record) => sum + record.accumulated, 0),
   [filteredAndSortedRecords]);
+  
+  // 日付範囲をクリアする関数
+  const clearDateFilters = () => {
+    setStartDateFilter('');
+    setEndDateFilter('');
+  };
   
   return (
     <div className="space-y-4">
@@ -90,10 +123,71 @@ export function HistoryPage() {
         </div>
       </div>
       
+      {/* 日付範囲フィルタ */}
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow animate-fade-in" style={{ animationDelay: '0.08s' }}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">期間フィルタ</h3>
+          {(startDateFilter || endDateFilter) && (
+            <button
+              onClick={clearDateFilters}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              aria-label="日付フィルタをクリア"
+            >
+              クリア
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="start-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              開始日
+            </label>
+            <input
+              id="start-date"
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => setStartDateFilter(e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              aria-label="フィルタ開始日"
+            />
+          </div>
+          <div>
+            <label htmlFor="end-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+              終了日
+            </label>
+            <input
+              id="end-date"
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => setEndDateFilter(e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded dark:bg-gray-700 dark:border-gray-600 transition-all focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              aria-label="フィルタ終了日"
+            />
+          </div>
+        </div>
+        {(startDateFilter || endDateFilter) && (
+          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {startDateFilter && endDateFilter 
+              ? `${startDateFilter} から ${endDateFilter} までの記録を表示`
+              : startDateFilter 
+                ? `${startDateFilter} 以降の記録を表示`
+                : `${endDateFilter} 以前の記録を表示`
+            }
+          </div>
+        )}
+      </div>
+      
       {/* 合計時間 */}
       <div className="bg-white dark:bg-gray-800 p-3 rounded shadow text-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
-        <p className="text-sm text-gray-500 dark:text-gray-400">合計時間</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {(startDateFilter || endDateFilter) ? '期間内合計時間' : '合計時間'}
+        </p>
         <p className="text-xl font-semibold">{formatDuration(totalTime)}</p>
+        {filteredAndSortedRecords.length !== completedRecords.length && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            {filteredAndSortedRecords.length} / {completedRecords.length} 件
+          </p>
+        )}
       </div>
       
       {/* レコードリスト */}
@@ -101,7 +195,7 @@ export function HistoryPage() {
         {filteredAndSortedRecords.length === 0 ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg shadow">
             <div className="emoji text-4xl mb-3">🔍</div>
-            {searchQuery.trim() ? (
+            {searchQuery.trim() || startDateFilter || endDateFilter ? (
               <p>検索条件に一致する記録がありません</p>
             ) : (
               <p>まだ記録がありません</p>
